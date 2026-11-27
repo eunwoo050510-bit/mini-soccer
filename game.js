@@ -17,11 +17,14 @@ function resize() {
   view.scale = k * dpr; view.x = left * dpr; view.y = top * dpr;
   view.l = -left / k; view.t = -top / k; view.w = w / k; view.h = h / k;     // 화면 전체가 장면에서 차지하는 범위
   view.key = sizeKey();
+  document.documentElement.style.setProperty('--vh', (h / 100) + 'px');
 }
 // 아이폰은 화면을 돌리거나 앱으로 열 때 크기 변경 알림이 크기가 바뀌기 전에 오기도 한다.
 // 그러면 그림이 눌려 보이므로, 그릴 때마다 크기가 맞는지 확인한다.
 function syncSize() { if (sizeKey() !== view.key) resize(); }
 addEventListener('resize', resize);
+if (window.ResizeObserver) new ResizeObserver(() => syncSize()).observe(cv);
+for (const type of ['orientationchange', 'pageshow', 'fullscreenchange']) addEventListener(type, () => { syncSize(); setTimeout(syncSize, 350); });
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 const fullRect = () => g.fillRect(view.l - 1, view.t - 1, view.w + 2, view.h + 2);
 
@@ -60,7 +63,7 @@ const isHuman = t => HUMANS[t];
 const newControl = () => ({charging:false, charge:0, curveOn:false, aim:null, armed:{a:false, b:false},
   power:{a:0, b:0}, passing:null, queued:null, switchT:0, switchSeen:new Set()});
 const IDLE = {mx:0, my:0, press:false, sprint:false, aDown:false, bDown:false, cDown:false, cUp:false,
-  cHeld:false, aHeld:false, bHeld:false, restart:false, aKick:null, bKick:null, curve:false};
+  cHeld:false, aHeld:false, bHeld:false, restart:false, aKick:null, bKick:null, curve:false, flick:null};
 let TEAM_NAME = ['우리 팀', 'AI 팀'];
 // 4-4-2: [자기 골라인에서의 거리, 세로 위치]
 const FORMATION = [[3,34],
@@ -87,7 +90,7 @@ function newMatch() {
       state:'idle', timer:0, cool:0, kickCool:0, think:rand(0, .5), walk:0, won:false,
       stamina:1, tired:false, bx:dirOf(t), by:0, turnShock:0});
   });
-  S = {players, ball:{x:PW/2, y:CY, z:0, vx:0, vy:0, vz:0, owner:null, last:0, target:null, shot:false, shotAge:0, held:0, control:null, ox:0, oy:0, minRun:0, cax:0, cay:0, curveT:0, beaten:false, guess:0},
+  S = {players, ball:{x:PW/2, y:CY, z:0, vx:0, vy:0, vz:0, owner:null, last:0, target:null, shot:false, shotAge:0, held:0, control:null, ox:0, oy:0, minRun:0, knock:false, cax:0, cay:0, curveT:0, beaten:false, guess:0},
     sel:[null, null], score:[0,0], time:0, freeze:0, restart:null, msg:'', msgT:0, over:false,
     overT:0, ctl:[newControl(), newControl()], pressing:[false,false]};
   kickoff(0);
@@ -191,7 +194,7 @@ function updateStamina(p) {
 /* ---------- 공 차기 ---------- */
 function release(p) {
   const b = S.ball;
-  b.owner = null; b.last = p.team; b.held = 0; p.kickCool = 0.35;
+  b.owner = null; b.last = p.team; b.held = 0; p.kickCool = 0.35; b.knock = false;
   if (S.restart && S.restart.taker === p) S.restart = null;
 }
 
@@ -316,6 +319,25 @@ function shoot(p, power, aimInput, err, curve = false, oneTouch = false) {
   if (wobble > 0.5 && isHuman(p.team)) say('자세 불안정!', 0.8);
 }
 
+// 치고 달리기: 공을 앞으로 길게 치고 전력으로 쫓아간다.
+const KNOCK_SPEED = 18, KNOCK_COST = 0.07;
+function knockOn(p, dx, dy) {
+  const b = S.ball, [ux, uy] = norm(dx, dy);
+  release(p);
+  p.kickCool = 0.36;
+  p.fxd = ux; p.fyd = uy; p.kickAnim = 0.2;
+  // 몸의 속도를 치는 방향으로 돌려 곧바로 따라붙는다.
+  const sp = Math.max(Math.hypot(p.vx, p.vy), 7);
+  p.vx = p.vx * 0.35 + ux * sp * 0.65; p.vy = p.vy * 0.35 + uy * sp * 0.65;
+  p.stamina = Math.max(0, p.stamina - KNOCK_COST);
+  b.x = p.x + ux * 0.9; b.y = p.y + uy * 0.9;
+  b.vx = ux * KNOCK_SPEED; b.vy = uy * KNOCK_SPEED; b.vz = 0; b.z = 0;
+  b.cax = b.cay = b.curveT = 0;
+  b.target = p; b.targetT = 0; b.shot = false; b.through = true; b.knock = true;
+  b.control = p.team; b.minRun = 0; b.ox = b.x; b.oy = b.y;
+  FX.thud(b.x, b.y, 0.15);
+}
+
 /* ---------- 수비 ---------- */
 function standTackle(p, ax, ay) {
   if (busy(p) || p.cool > 0) return;
@@ -364,7 +386,7 @@ function hasAttack(team) {
 
 function gain(p) {
   const b = S.ball;
-  b.control = p.team; b.minRun = 0; b.cax = b.cay = b.curveT = 0;
+  b.control = p.team; b.minRun = 0; b.cax = b.cay = b.curveT = 0; b.knock = false;
   b.owner = p; b.last = p.team; b.target = null; b.shot = false; b.z = 0; b.vz = 0; b.held = 0;
   S.sel[p.team] = p;
   p.think = rand(0.25, 0.55);
@@ -549,6 +571,11 @@ function controlHuman(p, cmd) {
     c.queued = null;
     return kickAction(p, act, ...norm(fx, fy), true);
   }
+  // 달리면서 조이스틱을 바깥으로 탁 튕기면 치고 달리기
+  if (cmd.flick && own && (cmd.sprint || cmd.press) && !p.tired && !busy(p) && !S.restart && !c.charging && !c.passing && !p.gk) {
+    return knockOn(p, cmd.flick.x, cmd.flick.y);
+  }
+
   const play = act => {
     if (own) return kickAction(p, act, ...norm(fx, fy));
     c.queued = {act, player:p, t:1.8};
@@ -600,7 +627,7 @@ function controlHuman(p, cmd) {
   }
   // 패스 받기 보정: 공이 오는 동안에는 조이스틱과 상관없이 받는 위치로 달린다.
   // 조이스틱 방향은 받은 뒤의 진행 방향과 다음 패스 방향이 된다.
-  if (incoming) return runToPass(p, b.through || cmd.sprint ? SPRINT : SPRINT * 0.88);
+  if (incoming) return runToPass(p, b.knock ? SPRINT * 1.04 : b.through || cmd.sprint ? SPRINT : SPRINT * 0.88);
   // 슛을 모으는 동안은 느리게 움직여서, 방향키로 골문 구석을 조준할 수 있다.
   const pace = ((cmd.sprint || cmd.press) && !p.tired ? SPRINT : p.tired ? TIRED_SPEED : RUN) * (own ? WITH_BALL : 1);
   if (moving) steer(p, ax, ay, c.charging ? 1.2 : pace);
@@ -710,7 +737,7 @@ function touchBall() {
     // 스루패스를 받는 선수는 공이 목표 공간 근처에 온 뒤에 잡는다.
     const receiving = b.target === p && Math.hypot(b.x - b.ox, b.y - b.oy) >= b.minRun - 2;
     if (b.target === p && !receiving) continue;
-    if (busy(p) || d > (receiving ? 1.9 : 1.05) || b.z > (receiving ? 1.9 : 1.5)) continue;
+    if (busy(p) || d > (receiving && !b.knock ? 1.9 : 1.05) || b.z > (receiving ? 1.9 : 1.5)) continue;
     if (b.shot && speed > 17) {                         // 강한 슛은 몸에 맞고 튕긴다.
       FX.thud(b.x, b.y, b.z + 0.5); b.cax = b.cay = b.curveT = 0;
       b.vx *= -0.2; b.vy = b.vy * 0.3 + rand(-5, 5); b.vz = rand(1, 3); b.shot = false; b.last = p.team; b.control = null; b.target = null; p.kickCool = 0.4;
@@ -1078,12 +1105,12 @@ function loop(now) {
   // 화면 주사율이 높아 업데이트가 없는 프레임에서도 눌림 입력을 보관한다.
   acc += elapsed * FX.frame(elapsed / 1000);
   const cmd = Net.menuOpen() ? {...IDLE} : Input.read();
-  if (pending) for (const k of ['aDown','bDown','cDown','cUp','restart','aKick','bKick']) cmd[k] = cmd[k] || pending[k];
+  if (pending) for (const k of ['aDown','bDown','cDown','cUp','restart','aKick','bKick','flick']) cmd[k] = cmd[k] || pending[k];
   pending = cmd;
   while (acc >= 1000/60) {
     update(pending, Net.remoteCommand());
     FX.track(S.ball);
-    pending = {...pending, aDown:false, bDown:false, cDown:false, cUp:false, restart:false, aKick:null, bKick:null};
+    pending = {...pending, aDown:false, bDown:false, cDown:false, cUp:false, restart:false, aKick:null, bKick:null, flick:null};
     acc -= 1000/60;
   }
   Net.hostFrame();

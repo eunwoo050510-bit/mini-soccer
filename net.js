@@ -8,7 +8,7 @@ const Net = (() => {
   let room = null, role = null, partner = null, hostPeer = null, code = 0, direct = false, attempt = 0;
   let lastSend = 0, seenAt = 0, seq = 0, eventSeq = 0, events = [], lastEvent = 0;
   let snapSeq = -1, snapAt = 0, targets = null, menu = false, notify = () => {};
-  const fresh = () => ({aD:0, bD:0, cD:0, aK:[0, 'ground', 0], bK:[0, 'ground', 0], cU:[0, 0, 0]});
+  const fresh = () => ({aD:0, bD:0, cD:0, aK:[0, 'ground', 0], bK:[0, 'ground', 0], cU:[0, 0, 0], fK:[0, 0, 0]});
   let out = fresh(), seen = null, pressedAt = {a:0, b:0, c:0}, remote = null, edges = null;
   const now = () => performance.now();
   const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
@@ -100,6 +100,7 @@ const Net = (() => {
       edges[k + 'Kick'] = c[k + 'K'][1] === 'lob' ? 'lob' : 'ground';
       edges[k + 'Hold'] = num(c[k + 'K'][2]);
     }
+    if (Array.isArray(c.fK) && seen.fK && c.fK[0] > seen.fK[0]) edges.flick = {x:num(c.fK[1]), y:num(c.fK[2])};
     if (c.cU[0] > seen.cU[0]) { edges.cUp = true; edges.cHold = num(c.cU[1]); edges.curve = !!c.cU[2]; }
     seen = JSON.parse(JSON.stringify(c));
   }
@@ -207,6 +208,7 @@ const Net = (() => {
     let pressed = false;
     for (const k of ['a', 'b', 'c']) if (cmd[k + 'Down']) { out[k + 'D']++; pressedAt[k] = t; pressed = true; }
     for (const k of ['a', 'b']) if (cmd[k + 'Kick']) { out[k + 'K'] = [out[k + 'K'][0] + 1, cmd[k + 'Kick'], r2((t - pressedAt[k]) / 1000)]; pressed = true; }
+    if (cmd.flick) { out.fK = [out.fK[0] + 1, r2(cmd.flick.x), r2(cmd.flick.y)]; pressed = true; }
     if (cmd.cUp) { out.cU = [out.cU[0] + 1, r2((t - pressedAt.c) / 1000), cmd.curve ? 1 : 0]; pressed = true; }
     if (pressed || t - lastSend >= SEND_MS) {
       lastSend = t;

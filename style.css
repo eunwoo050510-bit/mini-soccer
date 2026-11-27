@@ -2,9 +2,11 @@
 :root{
   --sat:env(safe-area-inset-top,0px); --sar:env(safe-area-inset-right,0px);
   --sab:env(safe-area-inset-bottom,0px); --sal:env(safe-area-inset-left,0px);
-  --u:clamp(59px,18vh,82px);                 /* 버튼 크기의 기준 */
+  --u:clamp(59px,calc(var(--vh,1vh) * 18),82px);                 /* 버튼 크기의 기준 */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* 휴대폰의 글자 크기 자동 확대가 버튼 모양을 망가뜨리지 않게 한다. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#10151c;
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
   touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}

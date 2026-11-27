@@ -7,6 +7,10 @@ const Input = (() => {
   let downQ = {}, upQ = {};
   let kickQ = {};                        // 패스 버튼을 뗄 때: 'ground' 또는 'lob'(위로 끈 상태)
   const stick = {x:0, y:0};
+  let flick = null, samples = [], touchedAt = 0, lastFlick = 0;
+  // 튕김: 짧은 시간(FLICK_MS) 안에 바깥쪽으로 FLICK_RISE px 넘게 나가고, 테두리 밖에서 끝난 움직임.
+  // 방향만 돌리는 움직임은 중심에서의 거리가 거의 그대로라서 걸리지 않는다.
+  const FLICK_MS = 130, FLICK_RISE = 20, FLICK_EDGE = 56, FOLLOW = 62;
   let curve = false;                     // 감아차기. 다음 슛 버튼을 누를 때까지 마지막 값을 유지한다.
   const CURVE_DRAG = 24;
   const LOB_DRAG = 26;                   // 이만큼(px) 위로 끌면 로빙
@@ -27,6 +31,7 @@ const Input = (() => {
     keys[e.code] = true;
     if (ACTION[e.code]) setBtn(ACTION[e.code], true);
     if (e.code === 'KeyR') restart = true;
+    if (e.code === 'KeyF') flick = 'keys';
     if (LOB_KEY[e.code]) { downQ[LOB_KEY[e.code]] = true; kickQ[LOB_KEY[e.code]] = 'lob'; }
   });
   addEventListener('keyup', e => {
@@ -56,6 +61,18 @@ const Input = (() => {
   const zone = document.getElementById('zone'), pad = document.getElementById('stick'), knob = document.getElementById('knob');
   let cx = 0, cy = 0;
   function moveStick(e) {
+    const dx = e.clientX - cx, dy = e.clientY - cy, r = Math.hypot(dx, dy);
+    const t = performance.now();
+    samples = samples.filter(s => t - s.t <= FLICK_MS);
+    if (samples.length && t - touchedAt > 160 && t - lastFlick > 450
+        && r >= FLICK_EDGE && r - Math.min(...samples.map(s => s.r)) >= FLICK_RISE) {
+      flick = {x:dx / r, y:dy / r};
+      lastFlick = t; samples = [];
+    }
+    // 손가락이 멀리 나가면 중심이 따라와서, 계속 밀고 있어도 다시 튕길 수 있다.
+    let kept = r;
+    if (r > FOLLOW) { const k = (r - FOLLOW) / r; cx += dx * k; cy += dy * k; kept = FOLLOW; }
+    samples.push({t, r:kept});
     let x = (e.clientX - cx) / 48, y = (e.clientY - cy) / 48;
     const m = Math.hypot(x, y);
     if (m > 1) { x /= m; y /= m; }
@@ -68,9 +85,10 @@ const Input = (() => {
     pad.style.left = `${px - r.left - 60}px`;
     pad.style.bottom = `${r.bottom - py - 60}px`;
     cx = px; cy = py;
+    touchedAt = performance.now(); samples = [];
     moveStick(e);
   }, moveStick, () => {
-    stick.x = stick.y = 0;
+    stick.x = stick.y = 0; samples = [];
     knob.style.transform = pad.style.left = pad.style.bottom = '';
   });
 
@@ -120,6 +138,7 @@ const Input = (() => {
     for (const end of resets) end();
     held.a = held.b = held.c = false;
     downQ = {}; upQ = {}; kickQ = {};
+    flick = null; samples = [];
   }
   addEventListener('blur', reset);
 
@@ -134,7 +153,9 @@ const Input = (() => {
       const press = !!keys.KeyE || touchPress;
       const cmd = {mx, my, press, sprint: !!(keys.ShiftLeft || keys.ShiftRight || keys.Space) || touchSprint,
         aDown:!!downQ.a, bDown:!!downQ.b, cDown:!!downQ.c, cUp:!!upQ.c, cHeld:held.c, aHeld:held.a, bHeld:held.b, restart,
-        aKick:kickQ.a || null, bKick:kickQ.b || null, curve:curve || !!keys.KeyO};
+        aKick:kickQ.a || null, bKick:kickQ.b || null, curve:curve || !!keys.KeyO,
+        flick:flick === 'keys' ? (mx || my ? {x:mx, y:my} : null) : flick};
+      flick = null;
       downQ = {}; upQ = {}; kickQ = {}; restart = false;
       if (press !== shownPress) {
         shownPress = press;
