@@ -1065,7 +1065,8 @@ function loop(now) {
     Net.guestFrame(paused ? IDLE : Input.read(), elapsed / 1000);
     updateLabels(); draw(); requestAnimationFrame(loop); return;
   }
-  if (paused) { acc = 0; updateLabels(); draw(); requestAnimationFrame(loop); return; }
+  // 방장은 친구를 기다리며 멈춰 있는 동안에도 접속을 확인해야 한다.
+  if (paused) { acc = 0; Net.hostFrame(); updateLabels(); draw(); requestAnimationFrame(loop); return; }
   // 화면 주사율이 높아 업데이트가 없는 프레임에서도 눌림 입력을 보관한다.
   acc += elapsed * FX.frame(elapsed / 1000);
   const cmd = Net.menuOpen() ? {...IDLE} : Input.read();
