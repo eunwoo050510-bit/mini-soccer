@@ -26,6 +26,7 @@
   <button class="btn" id="bC"></button>
   <button class="btn" id="bS">달리기</button>
   <button id="bPause" aria-label="일시정지">II</button>
+  <button id="bFullGame" aria-label="전체 화면">⛶</button>
 </div>
 
 <div id="menu" class="overlay">
@@ -35,6 +36,7 @@
     <button id="bFriend">친구와 하기</button>
     <button id="bNew" hidden>새 경기</button>
     <button id="bQuit" hidden>친구와 하기 나가기</button>
+    <button id="bFull">⛶ 전체 화면</button>
     <button id="bSound">효과음 켜짐</button>
   </div>
   <div id="menuNet" hidden>
@@ -49,6 +51,16 @@
     <button id="bBack">뒤로</button>
   </div>
   <p id="installTip" hidden></p>
+</div>
+
+<div id="guide" class="overlay" hidden>
+  <h2 id="guideTitle"></h2>
+  <p id="guideSteps"></p>
+  <div id="guideButtons">
+    <button id="bOpenOut"></button>
+    <button id="bCopyLink">주소 복사</button>
+    <button id="bGuideClose">닫기</button>
+  </div>
 </div>
 
 <div id="rotate" class="overlay">

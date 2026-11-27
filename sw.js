@@ -1,5 +1,5 @@
 // 인터넷이 되면 최신 파일을 받고, 안 되면 저장해 둔 파일로 실행한다.
-const CACHE = 'mini-soccer-v5';
+const CACHE = 'mini-soccer-v6';
 const FILES = ['./', 'index.html', 'style.css', 'input.js', 'fx.js', 'p2p.js', 'net.js', 'game.js', 'app.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 

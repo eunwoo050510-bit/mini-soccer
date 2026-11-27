@@ -35,6 +35,15 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   background:#0b1118ee;color:#fff;text-align:center;padding:calc(var(--sat) + 12px) calc(var(--sar) + 20px) calc(var(--sab) + 12px) calc(var(--sal) + 20px)}
 #menu{z-index:5}
+#bFullGame{position:fixed;right:calc(var(--sar) + 64px);top:calc(var(--sat) + 6px);width:48px;height:48px;border-radius:12px;
+  border:1px solid #fff6;background:#0006;color:#fff;font-size:22px;padding:0}
+#menu #bFull{background:#7a4fd0;min-height:40px;font-size:14px}
+#guide{z-index:20;background:#0b1118fa;gap:10px;overflow:auto}
+#guide h2{margin:0;font-size:20px;color:#ffe95c}
+#guideSteps{margin:0;max-width:520px;font-size:14px;line-height:1.6;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
+#guideButtons{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+#guide button{min-width:130px;min-height:42px;border:0;border-radius:21px;font:bold 15px sans-serif;background:#334052;color:#fff}
+#guide #bOpenOut{background:#2d6cff}
 #menu h1{margin:0;font-size:30px;color:#ffe95c}
 #menu button{min-width:200px;min-height:50px;border:0;border-radius:25px;font:bold 18px inherit;font-family:inherit;background:#2f8a41;color:#fff}
 #menu #bNew,#menu #bSound,#menu #bBack,#menu #bQuit{background:#334052}

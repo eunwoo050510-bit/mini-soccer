@@ -9,7 +9,7 @@
   const pad = $('pad'), typed = $('codeText'), share = $('bShare'), enter = $('bEnter');
   let started = false, listTimer = 0, shownRooms = '', mode = null, number = '', hostCode = '';
   // 초대 링크(주소#room=123456)로 들어오면 방 번호를 미리 채운다.
-  const invited = (location.hash.match(/^#room=(\d{6})$/) || [])[1] || '';
+  const invited = (location.hash.match(/^#room=(\d{6})$/) || location.search.match(/[?&]room=(\d{6})(?:&|$)/) || [])[1] || '';
 
   if (!standalone) {
     tip.hidden = false;
@@ -17,14 +17,93 @@
                           : '안드로이드: Chrome 메뉴(⋮) → "홈 화면에 추가"를 하면 앱처럼 열려요.';
   }
 
-  // 안드로이드는 전체 화면과 가로 고정이 가능하다. 아이폰 Safari는 지원하지 않아 조용히 넘어간다.
-  async function goFullscreen() {
-    try {
-      const el = document.documentElement;
-      if (!document.fullscreenElement && el.requestFullscreen && !ios) await el.requestFullscreen({navigationUI:'hide'});
-      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
-    } catch (err) { /* 지원하지 않는 기기에서는 회전 안내 화면이 대신한다. */ }
+  /* ---------- 전체 화면 ---------- */
+  // 브라우저마다 방법이 다르다.
+  //  - 안드로이드 Chrome, 아이패드 등: 버튼 한 번으로 전체 화면
+  //  - 아이폰: 브라우저에서는 지원하지 않아 '홈 화면에 추가'가 필요하다.
+  //  - 카톡·구글 앱처럼 앱 속 브라우저: Safari나 Chrome으로 옮겨야 한다.
+  const ua = navigator.userAgent;
+  const android = /Android/i.test(ua);
+  const inApp = /KAKAOTALK/i.test(ua) ? 'kakao'
+    : /GSA\/|Instagram|FBAN|FBAV|FB_IAB|NAVER\(inapp|DaumApps|\bLine\/|; wv\)/i.test(ua) ? 'other' : '';
+  const pageUrl = location.href;                 // 초대 링크의 방 번호까지 기억해 둔다.
+  const root = document.documentElement;
+  const request = root.requestFullscreen || root.webkitRequestFullscreen;
+  const fullElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const canFull = !!request && !inApp && !/iPhone|iPod/.test(ua);
+
+  async function lockLandscape() {
+    try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); }
+    catch (err) { /* 지원하지 않는 기기에서는 회전 안내 화면이 대신한다. */ }
   }
+  async function goFullscreen() {
+    if (standalone) return lockLandscape();
+    if (!canFull) return false;
+    try {
+      if (!fullElement()) await request.call(root, {navigationUI:'hide'});
+      await lockLandscape();
+      return true;
+    } catch (err) { return false; }
+  }
+
+  function showGuide() {
+    const steps = $('guideSteps'), go = $('bOpenOut'), copy = $('bCopyLink');
+    go.hidden = true; copy.hidden = false; copy.textContent = '주소 복사';
+    if (inApp) {
+      const target = ios ? 'Safari' : 'Chrome';
+      $('guideTitle').textContent = `${target}에서 열어주세요`;
+      const direct = inApp === 'kakao' || android;
+      go.hidden = !direct; go.textContent = `${target}로 열기`;
+      steps.textContent = '지금은 앱 속 브라우저라서 전체 화면을 쓸 수 없어요.\n' +
+        (direct ? `아래 "${target}로 열기"를 누르세요. 안 열리면 주소를 복사해서 ${target}에 붙여넣으세요.`
+                : `주소를 복사해서 ${target} 주소창에 붙여넣으세요.`);
+    } else if (ios) {
+      $('guideTitle').textContent = '아이폰에서 전체 화면으로 하기';
+      steps.textContent = '1. Safari 아래(또는 위)의 공유 버튼을 누르세요. 안 보이면 ⋯ 메뉴 안에 있어요.\n2. "홈 화면에 추가" → "추가"를 누르세요.\n3. 홈 화면에 생긴 "미니축구" 아이콘으로 실행하세요.\n친구 방에 들어갈 때는 아이콘으로 연 뒤 방 번호를 입력하세요.';
+    } else {
+      $('guideTitle').textContent = '전체 화면으로 하기';
+      steps.textContent = '브라우저 메뉴(⋮)에서 "홈 화면에 추가" 또는 "앱 설치"를 누른 뒤,\n홈 화면의 아이콘으로 실행하세요.';
+    }
+    $('guide').hidden = false;
+  }
+  $('bGuideClose').addEventListener('click', () => { $('guide').hidden = true; });
+  $('bOpenOut').addEventListener('click', () => {
+    if (inApp === 'kakao') location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(pageUrl);
+    else {
+      const u = new URL(pageUrl);
+      // 안드로이드의 앱 속 브라우저에서 Chrome을 여는 주소. #방번호는 주소 형식과 겹쳐서 ?room= 으로 바꿔 보낸다.
+      const room = (u.hash.match(/^#room=(\d{6})$/) || [])[1];
+      location.href = `intent://${u.host}${u.pathname}${room ? '?room=' + room : ''}#Intent;scheme=https;package=com.android.chrome;end`;
+    }
+  });
+  $('bCopyLink').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(pageUrl); $('bCopyLink').textContent = '복사했어요'; }
+    catch (err) { $('guideSteps').textContent = `아래 주소를 길게 눌러 복사하세요.\n${pageUrl}`; }
+  });
+
+  async function toggleFullscreen() {
+    FX.unlock();
+    if (fullElement()) {
+      try { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (err) {}
+      return;
+    }
+    if (!canFull) return showGuide();
+    goFullscreen();
+    // 요청에 아무 반응이 없는 브라우저도 있어서, 잠시 뒤에도 그대로면 방법을 안내한다.
+    setTimeout(() => { if (!fullElement()) showGuide(); }, 1200);
+  }
+  // 이미 앱처럼 열었으면 버튼이 필요 없다.
+  function updateFullButtons() {
+    const on = !!fullElement();
+    $('bFull').hidden = standalone;
+    $('bFullGame').hidden = standalone || on;
+    $('bFull').textContent = on ? '전체 화면 끄기' : '⛶ 전체 화면';
+    setTimeout(() => dispatchEvent(new Event('resize')), 250);
+  }
+  for (const id of ['bFull', 'bFullGame']) $(id).addEventListener('click', toggleFullscreen);
+  for (const type of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(type, updateFullButtons);
+  updateFullButtons();
+  if (inApp) showGuide();                          // 앱 속 브라우저로 들어오면 바로 알려준다.
 
   // 메뉴를 지금 상황(혼자/친구와)에 맞게 보여준다.
   function showMain() {
@@ -173,7 +252,7 @@
 
   if (invited) {
     number = invited;
-    history.replaceState(null, '', location.pathname + location.search);
+    history.replaceState(null, '', location.pathname);
     openLobby('초대받은 방이에요. "들어가기"를 눌러주세요.');
   }
 
