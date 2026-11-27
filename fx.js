@@ -237,7 +237,7 @@ const FX = (() => {
     }
     if (flash > 0.02) {
       g.globalAlpha = Math.min(0.7, flash); g.fillStyle = '#fff';
-      g.fillRect(-(view.w - 960) / 2 - 1, -(view.h - 540) / 2 - 1, view.w + 2, view.h + 2);
+      g.fillRect(view.l - 1, view.t - 1, view.w + 2, view.h + 2);
       g.globalAlpha = 1;
     }
     if (banner) {

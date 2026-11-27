@@ -2,21 +2,28 @@
 const cv = document.getElementById('c');
 const g = cv.getContext('2d');
 
-// 960x540 장면을 휴대폰 화면 비율에 맞춰 가운데에 놓고, 남는 곳은 배경으로 채운다.
-const view = {scale:1, x:0, y:0, w:960, h:540};
+// 960x540 장면 중에서 실제 그림이 있는 부분(CONTENT)을 휴대폰 화면에 꽉 차게 맞추고,
+// 남는 곳은 배경으로 채운다. 가로와 세로는 항상 같은 비율로 늘린다.
+const CONTENT = {x:15, y:0, w:930, h:506};
+const view = {scale:1, x:0, y:0, l:0, t:0, w:960, h:540, key:''};
+const sizeKey = () => cv.clientWidth + 'x' + cv.clientHeight + '@' + (window.devicePixelRatio || 1);
 function resize() {
   const w = cv.clientWidth, h = cv.clientHeight;
   if (!w || !h) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);      // 배터리와 발열을 위해 최대 2배
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-  const k = Math.min(w / 960, h / 540);
-  view.scale = k * dpr;
-  view.x = (w - 960 * k) / 2 * dpr; view.y = (h - 540 * k) / 2 * dpr;
-  view.w = w / k; view.h = h / k;
+  const k = Math.min(w / CONTENT.w, h / CONTENT.h);
+  const left = (w - CONTENT.w * k) / 2 - CONTENT.x * k, top = (h - CONTENT.h * k) / 2 - CONTENT.y * k;
+  view.scale = k * dpr; view.x = left * dpr; view.y = top * dpr;
+  view.l = -left / k; view.t = -top / k; view.w = w / k; view.h = h / k;     // 화면 전체가 장면에서 차지하는 범위
+  view.key = sizeKey();
 }
+// 아이폰은 화면을 돌리거나 앱으로 열 때 크기 변경 알림이 크기가 바뀌기 전에 오기도 한다.
+// 그러면 그림이 눌려 보이므로, 그릴 때마다 크기가 맞는지 확인한다.
+function syncSize() { if (sizeKey() !== view.key) resize(); }
 addEventListener('resize', resize);
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
-const fullRect = () => g.fillRect(-(view.w - 960) / 2 - 1, -(view.h - 540) / 2 - 1, view.w + 2, view.h + 2);
+const fullRect = () => g.fillRect(view.l - 1, view.t - 1, view.w + 2, view.h + 2);
 
 /* ---------- 설정 (미터 단위) ---------- */
 const PW = 105, PH = 68, CY = PH/2, GOAL_HALF = 4, BAR = 2.5;
@@ -953,6 +960,7 @@ function text(s, x, y, size, color = '#fff', align = 'center') {
 }
 
 function draw() {
+  syncSize();
   g.setTransform(view.scale, 0, 0, view.scale, view.x, view.y);
   g.fillStyle = '#111a26'; fullRect();
   g.save();
