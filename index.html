@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>미니 11 축구</title>
+<!-- 홈 화면에 추가했을 때 앱처럼 열리도록 하는 설정 (안드로이드, 아이폰) -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#10151c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="미니축구">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="controls">
+  <div id="zone"><div id="stick"><div id="knob"></div></div></div>
+  <button class="btn" id="bA"></button>
+  <button class="btn" id="bB"></button>
+  <button class="btn" id="bC"></button>
+  <button class="btn" id="bS">달리기</button>
+  <button id="bPause" aria-label="일시정지">II</button>
+</div>
+
+<div id="menu" class="overlay">
+  <h1>미니 11 축구</h1>
+  <div id="menuMain">
+    <button id="bStart">AI와 경기 시작</button>
+    <button id="bFriend">친구와 하기</button>
+    <button id="bNew" hidden>새 경기</button>
+    <button id="bQuit" hidden>친구와 하기 나가기</button>
+    <button id="bSound">효과음 켜짐</button>
+  </div>
+  <div id="menuNet" hidden>
+    <p id="netStatus"></p>
+    <button id="bHost">방 만들기</button>
+    <div id="roomList"></div>
+    <button id="bShare" hidden>초대 링크 보내기</button>
+    <div id="pad" hidden>
+      <div id="codeRow"><span id="codeText"></span><button id="bEnter">들어가기</button></div>
+      <div id="keys"></div>
+    </div>
+    <button id="bBack">뒤로</button>
+  </div>
+  <p id="installTip" hidden></p>
+</div>
+
+<div id="rotate" class="overlay">
+  <div class="phone"></div>
+  <p>휴대폰을 가로로 돌려주세요</p>
+</div>
+
+<script src="input.js"></script>
+<script src="fx.js"></script>
+<script src="p2p.js"></script>
+<script src="net.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

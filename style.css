@@ -1,0 +1,72 @@
+/* 모바일 가로 화면 전용 */
+:root{
+  --sat:env(safe-area-inset-top,0px); --sar:env(safe-area-inset-right,0px);
+  --sab:env(safe-area-inset-bottom,0px); --sal:env(safe-area-inset-left,0px);
+  --u:clamp(59px,18vh,82px);                 /* 버튼 크기의 기준 */
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#10151c;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+body{position:fixed;inset:0}
+[hidden]{display:none!important}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+/* 화면 왼쪽 아래 어디를 눌러도 그 자리에 조이스틱이 생긴다. */
+#zone{position:fixed;left:0;bottom:0;width:42%;height:72%;touch-action:none}
+#stick{position:absolute;left:calc(var(--sal) + 14px);bottom:calc(var(--sab) + 14px);width:120px;height:120px;border-radius:50%;
+  background:#ffffff1f;border:2px solid #fff5;pointer-events:none}
+#knob{position:absolute;left:34px;top:34px;width:48px;height:48px;border-radius:50%;background:#fffc}
+
+.btn{position:fixed;width:var(--u);height:var(--u);padding:0;border-radius:50%;border:2px solid #fffa;background:#0007;color:#fff;
+  font:bold calc(var(--u) * .21)/1.15 inherit;font-family:inherit;white-space:pre-line;touch-action:none;outline:none}
+.btn.on{background:#2d7dffdd}
+.btn.lob{background:#ff7a1add;transform:translateY(-18px)}
+.btn.curve{background:#8b3dffee;transform:translateY(16px);box-shadow:0 0 18px #b47bff}
+#bS{right:calc(var(--sar) + 8px);bottom:calc(var(--sab) + 8px);width:calc(var(--u) * 1.14);height:calc(var(--u) * 1.14)}
+#bA{right:calc(var(--sar) + var(--u) * 1.14 + 16px);bottom:calc(var(--sab) + 8px);width:calc(var(--u) * 1.36);height:calc(var(--u) * 1.36);font-size:calc(var(--u) * .26)}
+/* B: 스루/태클(대각선 위), C: 슛/슬라이딩(달리기 바로 위) */
+#bB{right:calc(var(--sar) + var(--u) * 1.04 + 14px);bottom:calc(var(--sab) + var(--u) * 1.38 + 16px)}
+#bC{right:calc(var(--sar) + 8px);bottom:calc(var(--sab) + var(--u) * 1.14 + 18px)}
+#bS.press{background:#ff7a1add;transform:translateY(-24px)}
+#bPause{position:fixed;right:calc(var(--sar) + 8px);top:calc(var(--sat) + 6px);width:48px;height:48px;border-radius:12px;
+  border:1px solid #fff6;background:#0006;color:#fff;font-weight:bold;font-size:15px}
+
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:#0b1118ee;color:#fff;text-align:center;padding:calc(var(--sat) + 12px) calc(var(--sar) + 20px) calc(var(--sab) + 12px) calc(var(--sal) + 20px)}
+#menu{z-index:5}
+#menu h1{margin:0;font-size:30px;color:#ffe95c}
+#menu button{min-width:200px;min-height:50px;border:0;border-radius:25px;font:bold 18px inherit;font-family:inherit;background:#2f8a41;color:#fff}
+#menu #bNew,#menu #bSound,#menu #bBack,#menu #bQuit{background:#334052}
+#menu #bFriend,#roomList button{background:#2d6cff}
+#menu #bSound,#menu #bBack{min-height:40px;font-size:14px}
+/* 낮은 화면에서도 버튼이 다 보이도록 두 줄로 놓는다. */
+#menuMain,#menuNet{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;max-width:460px}
+#netStatus{width:100%;margin:0;font-size:15px;line-height:1.5;white-space:pre-line}
+#roomList{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%}
+#roomList:empty{display:none}
+#menu #bShare{background:#2d6cff}
+#pad{width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
+#codeRow{display:flex;align-items:center;gap:14px}
+#codeText{font-size:26px;font-weight:bold;letter-spacing:6px;min-width:170px;color:#ffe95c}
+#menu #bEnter{min-width:110px;min-height:42px;background:#2d6cff}
+#menu #bEnter:disabled{opacity:.35}
+#keys{display:grid;grid-template-columns:repeat(6,52px);gap:6px}
+#menu #keys .key{min-width:0;min-height:42px;padding:0;border-radius:10px;background:#334052;font-size:18px}
+#menu #keys .key:last-child{font-size:13px}
+#installTip{user-select:text;-webkit-user-select:text}
+#netStatus{user-select:text;-webkit-user-select:text}
+/* 아주 낮은 화면에서는 제목을 줄여 자리를 만든다. */
+@media (max-height:380px){ #menu{gap:8px} #menu h1{font-size:22px} }
+@media (max-height:350px){
+  #menu{gap:4px} #menu h1{font-size:18px} #netStatus{font-size:13px;line-height:1.35}
+  #menuNet{gap:6px} #menu #bHost,#menu #bShare{min-height:38px;font-size:15px}
+  #pad{gap:5px} #menu #bEnter{min-height:36px} #menu #keys .key{min-height:36px} #menu #bBack{min-height:32px}
+}
+/* 방 번호를 입력하는 동안에는 설치 안내를 숨긴다. */
+#menuNet:not([hidden]) ~ #installTip{display:none}
+#installTip{margin:0;font-size:12px;color:#aebbc9;line-height:1.5}
+#rotate{z-index:10;display:none;background:#0b1118}
+.phone{width:46px;height:82px;border:4px solid #fff;border-radius:9px;animation:turn 1.8s ease-in-out infinite}
+@keyframes turn{0%,20%{transform:rotate(0)}65%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait){#rotate{display:flex}}
